@@ -13,9 +13,11 @@
   "type": "module",
   "dependencies": {
     "@apollo/server": "^4.10.2",
+    "@aws-sdk/client-s3": "^3.556.0",
     "apollo-server": "^3.13.0",
     "express": "^4.19.2",
     "graphql": "^16.8.1",
+    "luxon": "^3.4.4",
     "mongodb": "^6.5.0",
     "mongoose": "^8.3.1"
   },

@@ -9,7 +9,9 @@ const server = new ApolloServer({
     typeDefs,
     resolvers,
 });
+
 const app = express()
+
 await mongoose.connect(process.env.DATABASE)
 console.log("Database connected")
 

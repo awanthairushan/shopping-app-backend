@@ -1,20 +1,20 @@
 import {ApolloServer} from '@apollo/server';
+import mongoose from "mongoose";
+import express from 'express'
 import typeDefs from "./graphql/typedefs.js";
 import resolvers from "./graphql/resolvers.js";
-import mongoose from "mongoose";
-import {startStandaloneServer} from "@apollo/server/standalone";
+import {expressMiddleware} from "@apollo/server/express4";
 
 const server = new ApolloServer({
     typeDefs,
     resolvers,
 });
-mongoose.connect(process.env.DATABASE)
-    .then(() => {
-        console.log("Database connected")
-    })
+const app = express()
+await mongoose.connect(process.env.DATABASE)
+console.log("Database connected")
 
-const {url} = await startStandaloneServer(server, {
-    listen: {port: 4000}
-})
 
-console.log('server running at ' + url)
+await server.start()
+app.use('/api', express.json(), expressMiddleware(server))
+
+app.listen(process.env.PORT, () => console.log('server running at ' + process.env.PORT + ' port'))

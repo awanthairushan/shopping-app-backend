@@ -3,14 +3,22 @@ import { gql } from "apollo-server";
 const typeDefs = gql`
     type Product {
         name: String
-        category: String
-        price: Int
+        price: Float,
+        discountedPrice: Float,
+        quantity: Int,
+        category: String,
+        image: String,
+        description: String,
     }
 
     input ProductInput {
         name: String
-        category: String
-        price: Int
+        price: Float
+        discountedPrice: Float,
+        quantity: Int,
+        category: String,
+        image: String,
+        description: String,
     }
 
     type Query {

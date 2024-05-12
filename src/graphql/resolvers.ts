@@ -1,9 +1,15 @@
 import Product, {IProduct} from '../models/Product.js';
 
+
 interface ProductInput {
-    name: string;
-    category: string;
-    price: number;
+    id: string,
+    name: string,
+    price:number,
+    discountedPrice: number,
+    quantity: number,
+    category: string,
+    image: string,
+    description?: string
 }
 
 const resolvers = {
@@ -17,14 +23,20 @@ const resolvers = {
     },
 
     Mutation: {
-        async createProduct(_: unknown, {productInput}: { productInput: ProductInput }): Promise<{ id: string }> {
+        async createProduct(_: unknown, {productInput}: {productInput: ProductInput }): Promise<{ id: string }> {
+
             const createdProduct = new Product({
                 name: productInput.name,
-                category: productInput.category,
                 price: productInput.price,
+                discountedPrice: productInput.discountedPrice,
+                quantity: productInput.quantity,
+                category: productInput.category,
+                image: productInput.image,
+                description: productInput.description
             });
 
             const res = await createdProduct.save();
+
             return {
                 id: res.id,
                 // @ts-ignore

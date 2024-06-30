@@ -1,6 +1,5 @@
 import Product, {IProduct} from '../models/Product.js';
 
-
 interface ProductInput {
     id: string,
     name: string,
@@ -24,7 +23,6 @@ const resolvers = {
 
     Mutation: {
         async createProduct(_: unknown, {productInput}: {productInput: ProductInput }): Promise<{ id: string }> {
-
             const createdProduct = new Product({
                 name: productInput.name,
                 price: productInput.price,

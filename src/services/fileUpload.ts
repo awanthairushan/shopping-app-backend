@@ -5,7 +5,7 @@ const generateFileName = (fileName) => {
     const timeNow = DateTime.now().toMillis();
     return timeNow+fileName
 }
-const fileUpload = async (file, fileName) => {
+export const fileUpload = async (file, fileName): Promise<string> => {
     const s3 = new S3Client({
         credentials: {
             accessKeyId: process.env.S3_ACCESS_KEY,
@@ -25,5 +25,6 @@ const fileUpload = async (file, fileName) => {
 
     await s3.send(new PutObjectCommand(uploadParams));
 
+    return modifiedFileName;
     // TODO: returning the link part should implement. https://www.sammeechward.com/storing-images-in-s3-from-node-server
 }

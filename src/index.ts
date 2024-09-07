@@ -5,10 +5,12 @@ import cors from 'cors'; // Make sure to install the 'cors' package
 import typeDefs from "./graphql/typedefs.js";
 import resolvers from "./graphql/resolvers.js";
 import {expressMiddleware} from "@apollo/server/express4";
+import dotenv from 'dotenv';
+dotenv.config();
 
 // CORS configuration
 const corsOptions = {
-    origin: 'http://localhost:3000', // or your specific origin
+    origin: 'http://localhost:5173', // or your specific origin
     credentials: true, // if your frontend sends credentials like cookies
 };
 

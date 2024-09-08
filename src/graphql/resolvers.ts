@@ -17,7 +17,12 @@ const resolvers = {
             return await Product.findById(ID);
         },
         async getProducts(_: unknown, {amount}: { amount: number }): Promise<IProduct[]> {
-            return await Product.find().sort({price: -1}).limit(amount);
+            try {
+                const products = await Product.find().sort({price: -1}).limit(amount); 
+                return products;
+              } catch (error) {
+                throw new Error("Failed to fetch products");
+              }
         },
     },
 
@@ -40,6 +45,11 @@ const resolvers = {
                 // @ts-ignore
                 ...res._doc
             };
+            
+            // return {
+            //     success: true,
+            //     message: 'product uploaded successfully'
+            // };
         },
         async deleteProduct(_: unknown, {ID}: { ID: string }): Promise<number> {
             return (await Product.deleteOne({_id: ID})).deletedCount;

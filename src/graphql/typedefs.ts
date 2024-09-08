@@ -2,7 +2,8 @@ import { gql } from "apollo-server";
 
 const typeDefs = gql`
     type Product {
-        name: String
+        id: String,
+        name: String,
         price: Float,
         discountedPrice: Float,
         quantity: Int,

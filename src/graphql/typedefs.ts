@@ -23,7 +23,7 @@ const typeDefs = gql`
     }
 
     type Query {
-        product(ID: ID!): Product!
+        getProduct(ID: ID!): Product!
         getProducts(amount: Int): [Product]
     }
 

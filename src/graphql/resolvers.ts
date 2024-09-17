@@ -13,7 +13,7 @@ interface ProductInput {
 
 const resolvers = {
     Query: {
-        async product(_: unknown, {ID}: { ID: string }): Promise<IProduct | null> {
+        async getProduct(_: unknown, {ID}: { ID: string }): Promise<IProduct | null> {
             return await Product.findById(ID);
         },
         async getProducts(_: unknown, {amount}: { amount: number }): Promise<IProduct[]> {

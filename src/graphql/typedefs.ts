@@ -21,10 +21,15 @@ const typeDefs = gql`
         image: String,
         description: String,
     }
+    
+    type PaginatedProducts {
+      total: Int!
+      products: [Product!]!
+    }
 
     type Query {
         getProduct(ID: ID!): Product!
-        getProducts(amount: Int): [Product]
+        getProducts(offset: Int, limit: Int, category: String, query: String): PaginatedProducts
     }
 
     type Mutation {

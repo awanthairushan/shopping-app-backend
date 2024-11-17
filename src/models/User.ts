@@ -6,7 +6,7 @@ export interface IUser extends Document {
     name: string,
     contact: string,
     password: string
-    role: Number
+    role: number
 }
 
 const userSchema: Schema = new Schema({

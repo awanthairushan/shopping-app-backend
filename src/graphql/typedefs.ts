@@ -1,4 +1,5 @@
 import { gql } from "apollo-server";
+import {TProfileInput} from "../types";
 
 const typeDefs = gql`
     
@@ -57,6 +58,30 @@ const typeDefs = gql`
         email: String
         password: String
     }
+    
+    input ProfileInput {
+        fullName: String
+        address: String
+        city: String
+        postalCode: String
+        country: String
+        contact: String
+        email: String
+        addressType: String
+    }
+    
+    input OrderInput {
+        productId: String
+        quantity: Int
+    }
+
+    input PlaceOrderInput {
+        orderList: [OrderInput]
+        deliveryCharge: Int
+        discountCode: String
+        billingAddress: ProfileInput
+        shippingAddress: ProfileInput
+    }
 
     type Query {
         getProduct(ID: ID!): Product!
@@ -66,9 +91,11 @@ const typeDefs = gql`
     type Mutation {
         login(loginData: LoginInput): RegisterResponse!
         registerUser(userInput: UserInput): RegisterResponse!
+        saveProfile(profileInput: ProfileInput): String
         createProduct(productInput: ProductInput): Product!
         deleteProduct(ID: ID!): Boolean
         editProduct(ID: ID!, productInput: ProductInput): Boolean
+        placeOrder(placeOrderInput: PlaceOrderInput): String
     }
 `;
 

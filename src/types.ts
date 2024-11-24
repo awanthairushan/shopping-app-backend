@@ -31,7 +31,6 @@ export type TProfileInput = {
     country: string
     contact: string
     email: string
-    addressType: string
 }
 
 export type TOrder = {

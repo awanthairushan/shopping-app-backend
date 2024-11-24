@@ -8,6 +8,7 @@ import {errors} from "../data/errors.js";
 import Address from "../models/Address.js";
 import Order from "../models/Orders.js";
 import {ObjectId} from "mongodb";
+import mongoose from "mongoose";
 
 interface ProductInput {
     id: string,
@@ -132,7 +133,6 @@ const resolvers = {
                 country: profileInput.country,
                 contact: profileInput.contact,
                 email: profileInput.email,
-                addressType: profileInput.addressType
             })
 
             try {
@@ -194,121 +194,91 @@ const resolvers = {
                 price: productInput.price,
             })).modifiedCount;
         },
-        async placeOrder(_: unknown, {placeOrderInput}: {
-            placeOrderInput: TPlaceOrderInput
-        }, context: TContext): Promise<string> {
+        async placeOrder(_: unknown, { placeOrderInput }: { placeOrderInput: TPlaceOrderInput }, context: TContext): Promise<string> {
             if (!context.user || context.user.role !== UserRole.USER) {
-                throw new Error(errors.UNAUTHORIZED)
+                throw new Error(errors.UNAUTHORIZED);
             }
 
-            const newOrder = new Order({
-                orderList: placeOrderInput.orderList
-            })
+            console.log("placeOrderInput ", placeOrderInput)
+
+            const session = await mongoose.startSession();
+            console.log("session started ", session)
+            session.startTransaction();
 
             try {
-                const res = await newOrder.save()
-                console.log(res)
-            } catch (error) {
-                console.log(error)
-                throw new Error(errors.ORDER_CREATE_FAILED)
-            }
+                // Step 1: Create the new order
+                const newOrder = new Order({
+                    orderList: placeOrderInput.orderList
+                });
 
-            const productsBulkOperation = placeOrderInput.orderList.map((order: TOrder) => ({
-                updateOne: {
-                    filter: { _id: order.productId, quantity: { $gte: order.quantity } },  // Ensure sufficient stock
-                    update: { $inc: { quantity: -order.quantity } }
-                }
-            }))
+                const savedOrder = await newOrder.save({ session });
+                console.log(savedOrder);
 
-            try {
-                const res = await Product.bulkWrite(productsBulkOperation)
-                console.log(res)
-            } catch (error) {
-                console.log(error)
-                throw new Error(errors.ORDER_CREATE_FAILED)            }
+                // Step 2: Update product quantities in bulk
+                const productsBulkOperation = placeOrderInput.orderList.map((order: TOrder) => ({
+                    updateOne: {
+                        filter: { _id: order.productId, quantity: { $gte: order.quantity } },  // Ensure sufficient stock
+                        update: { $inc: { quantity: -order.quantity } }
+                    }
+                }));
 
-            const addresses = await Address.find({userId: context.user.id})
+                const productUpdateResult = await Product.bulkWrite(productsBulkOperation, { session });
+                console.log(productUpdateResult);
 
-            const existingBillingAddress = addresses.find(item => item.addressType === AddressType.Billing)
+                // Step 3: Manage billing and shipping addresses
+                const addresses = await Address.find({ userId: context.user.id }).session(session);
 
-            if (!existingBillingAddress) {
-                const newBillingAddress = new Address({
-                    userId: context.user.id,
-                    fullName: placeOrderInput.billingAddress.fullName,
-                    address: placeOrderInput.billingAddress.address,
-                    city: placeOrderInput.billingAddress.city,
-                    postalCode: placeOrderInput.billingAddress.postalCode,
-                    country: placeOrderInput.billingAddress.country,
-                    contact: placeOrderInput.billingAddress.contact,
-                    email: placeOrderInput.billingAddress.email,
-                    addressType: AddressType.Billing
-                })
-
-                try {
-                    const res = await newBillingAddress.save();
-                    console.log(res)
-                } catch (error) {
-                    console.log(error)
-                    throw new Error(errors.ORDER_CREATE_FAILED)                }
-            } else {
-                try {
-                    const res = await Address.findOneAndUpdate({_id: existingBillingAddress._id}, {
+                // Handle billing address
+                const existingBillingAddress = addresses.find(item => item.addressType === AddressType.Billing);
+                if (!existingBillingAddress) {
+                    const newBillingAddress = new Address({
                         userId: context.user.id,
-                        fullName: placeOrderInput.billingAddress.fullName,
-                        address: placeOrderInput.billingAddress.address,
-                        city: placeOrderInput.billingAddress.city,
-                        postalCode: placeOrderInput.billingAddress.postalCode,
-                        country: placeOrderInput.billingAddress.country,
-                        contact: placeOrderInput.billingAddress.contact,
-                        email: placeOrderInput.billingAddress.email,
-                    })
-                    console.log(res)
-                } catch (error) {
-                    console.log(error)
-                    throw new Error(errors.ORDER_CREATE_FAILED)
+                        ...placeOrderInput.billingAddress,
+                        addressType: AddressType.Billing
+                    });
+                    const savedBillingAddress = await newBillingAddress.save({ session });
+                    console.log(savedBillingAddress);
+                } else {
+                    const updatedBillingAddress = await Address.findOneAndUpdate(
+                        { _id: existingBillingAddress._id },
+                        { ...placeOrderInput.billingAddress },
+                        { session, new: true }
+                    );
+                    console.log(updatedBillingAddress);
                 }
-            }
-            const existingShippingAddress = addresses.find(item => item.addressType === AddressType.Shipping)
 
-            if (!existingShippingAddress) {
-                const newShippingAddress = new Address({
-                    userId: context.user.id,
-                    fullName: placeOrderInput.shippingAddress.fullName,
-                    address: placeOrderInput.shippingAddress.address,
-                    city: placeOrderInput.shippingAddress.city,
-                    postalCode: placeOrderInput.shippingAddress.postalCode,
-                    country: placeOrderInput.shippingAddress.country,
-                    contact: placeOrderInput.shippingAddress.contact,
-                    email: placeOrderInput.shippingAddress.email,
-                    addressType: AddressType.Shipping
-                })
-
-                try {
-                    const res = await newShippingAddress.save();
-                    console.log(res)
-                } catch (error) {
-                    console.log(error)
-                    throw new Error(errors.ORDER_CREATE_FAILED)                }
-            } else {
-                try {
-                    const res = await Address.findOneAndUpdate({_id: existingShippingAddress._id}, {
+                // Handle shipping address
+                const existingShippingAddress = addresses.find(item => item.addressType === AddressType.Shipping);
+                if (!existingShippingAddress) {
+                    const newShippingAddress = new Address({
                         userId: context.user.id,
-                        fullName: placeOrderInput.shippingAddress.fullName,
-                        address: placeOrderInput.shippingAddress.address,
-                        city: placeOrderInput.shippingAddress.city,
-                        postalCode: placeOrderInput.shippingAddress.postalCode,
-                        country: placeOrderInput.shippingAddress.country,
-                        contact: placeOrderInput.shippingAddress.contact,
-                        email: placeOrderInput.shippingAddress.email,
-                    })
-                    console.log(res)
-                } catch (error) {
-                    console.log(error)
-                    throw new Error(errors.ORDER_CREATE_FAILED)                }
-            }
+                        ...placeOrderInput.shippingAddress,
+                        addressType: AddressType.Shipping
+                    });
+                    const savedShippingAddress = await newShippingAddress.save({ session });
+                    console.log(savedShippingAddress);
+                } else {
+                    const updatedShippingAddress = await Address.findOneAndUpdate(
+                        { _id: existingShippingAddress._id },
+                        { ...placeOrderInput.shippingAddress },
+                        { session, new: true }
+                    );
+                    console.log(updatedShippingAddress);
+                }
 
-            // TODO: update the return correctly
-            return "TODO: update the return correctly"
+                // Commit the transaction
+                await session.commitTransaction();
+                session.endSession();
+
+                // Return a success message or the order ID
+                return "Order placed successfully";
+            } catch (error) {
+                console.log(error);
+                // Abort the transaction in case of an error
+                await session.abortTransaction();
+                session.endSession();
+                throw new Error(errors.ORDER_CREATE_FAILED);
+            }
         }
     },
 };

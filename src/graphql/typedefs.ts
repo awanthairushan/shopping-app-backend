@@ -1,5 +1,4 @@
 import { gql } from "apollo-server";
-import {TProfileInput} from "../types";
 
 const typeDefs = gql`
     
@@ -67,7 +66,6 @@ const typeDefs = gql`
         country: String
         contact: String
         email: String
-        addressType: String
     }
     
     input OrderInput {

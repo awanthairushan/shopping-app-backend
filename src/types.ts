@@ -24,13 +24,17 @@ export type TContext = {
 }
 
 export type TProfileInput = {
+    email: string
+    password: string
+}
+
+export type TAddress = {
     fullName: string
     address: string
     city: string
     postalCode: string
     country: string
     contact: string
-    email: string
 }
 
 export type TOrder = {
@@ -42,6 +46,7 @@ export type TPlaceOrderInput = {
     orderList: TOrder[]
     deliveryCharge: number
     discountCode: string
-    billingAddress: TProfileInput
-    shippingAddress: TProfileInput
+    registerData: TProfileInput
+    billingAddress: TAddress
+    shippingAddress: TAddress
 }

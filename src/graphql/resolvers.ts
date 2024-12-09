@@ -3,11 +3,10 @@ import User, {IUser} from "../models/User.js";
 import {hashPassword, verifyPassword} from "../services/authorize.js";
 import jwt from 'jsonwebtoken';
 import {AddressType, UserRole} from "./enums.js";
-import {LoginData, RegisterResponse, TContext, TOrder, TPlaceOrderInput, TProfileInput} from "../types";
+import {LoginData, RegisterResponse, TContext, TOrder, TPlaceOrderInput} from "../types";
 import {errors} from "../data/errors.js";
 import Address from "../models/Address.js";
 import Order from "../models/Orders.js";
-import {ObjectId} from "mongodb";
 import mongoose from "mongoose";
 
 interface ProductInput {
@@ -117,31 +116,6 @@ const resolvers = {
                 role: Number(registeredUser.role)
             };
         },
-        async saveProfile(_: unknown, {profileInput}: {
-            profileInput: TProfileInput
-        }, context: TContext): Promise<string> {
-            if (!context.user || context.user.role !== UserRole.USER) {
-                throw new Error(errors.UNAUTHORIZED)
-            }
-
-            const newProfile = new Address({
-                userId: context.user.id,
-                fullName: profileInput.fullName,
-                address: profileInput.address,
-                city: profileInput.city,
-                postalCode: profileInput.postalCode,
-                country: profileInput.country,
-                contact: profileInput.contact,
-                email: profileInput.email,
-            })
-
-            try {
-                const res = await newProfile.save();
-                return res.id
-            } catch (error) {
-                return error
-            }
-        },
         async createProduct(_: unknown, {productInput}: { productInput: ProductInput }, context: TContext): Promise<{
             id: string
         }> {
@@ -195,24 +169,37 @@ const resolvers = {
             })).modifiedCount;
         },
         async placeOrder(_: unknown, { placeOrderInput }: { placeOrderInput: TPlaceOrderInput }, context: TContext): Promise<string> {
+            let userId = context?.user?.id
             if (!context.user || context.user.role !== UserRole.USER) {
-                throw new Error(errors.UNAUTHORIZED);
+                const hashedPassword = await hashPassword(placeOrderInput.registerData.password)
+                const newUser = new User({
+                    name: placeOrderInput.billingAddress.fullName,
+                    email: placeOrderInput.registerData.email,
+                    contact: placeOrderInput.billingAddress.contact,
+                    password: hashedPassword,
+                    role: UserRole.USER
+                })
+
+                const res = await newUser.save();
+                userId = res._id as string
+                await this.registerUser(newUser)
             }
 
-            console.log("placeOrderInput ", placeOrderInput)
+            // console.log("placeOrderInput ", placeOrderInput)
 
             const session = await mongoose.startSession();
-            console.log("session started ", session)
+            // console.log("session started ", session)
             session.startTransaction();
 
             try {
                 // Step 1: Create the new order
                 const newOrder = new Order({
+                    userId: userId,
                     orderList: placeOrderInput.orderList
                 });
 
                 const savedOrder = await newOrder.save({ session });
-                console.log(savedOrder);
+                // console.log(savedOrder);
 
                 // Step 2: Update product quantities in bulk
                 const productsBulkOperation = placeOrderInput.orderList.map((order: TOrder) => ({
@@ -223,47 +210,47 @@ const resolvers = {
                 }));
 
                 const productUpdateResult = await Product.bulkWrite(productsBulkOperation, { session });
-                console.log(productUpdateResult);
+                // console.log(productUpdateResult);
 
                 // Step 3: Manage billing and shipping addresses
-                const addresses = await Address.find({ userId: context.user.id }).session(session);
+                const addresses = await Address.find({ userId: userId }).session(session);
 
                 // Handle billing address
                 const existingBillingAddress = addresses.find(item => item.addressType === AddressType.Billing);
                 if (!existingBillingAddress) {
                     const newBillingAddress = new Address({
-                        userId: context.user.id,
+                        userId: userId,
                         ...placeOrderInput.billingAddress,
                         addressType: AddressType.Billing
                     });
                     const savedBillingAddress = await newBillingAddress.save({ session });
-                    console.log(savedBillingAddress);
+                    // console.log(savedBillingAddress);
                 } else {
                     const updatedBillingAddress = await Address.findOneAndUpdate(
                         { _id: existingBillingAddress._id },
                         { ...placeOrderInput.billingAddress },
                         { session, new: true }
                     );
-                    console.log(updatedBillingAddress);
+                    // console.log(updatedBillingAddress);
                 }
 
                 // Handle shipping address
                 const existingShippingAddress = addresses.find(item => item.addressType === AddressType.Shipping);
                 if (!existingShippingAddress) {
                     const newShippingAddress = new Address({
-                        userId: context.user.id,
+                        userId: userId,
                         ...placeOrderInput.shippingAddress,
                         addressType: AddressType.Shipping
                     });
                     const savedShippingAddress = await newShippingAddress.save({ session });
-                    console.log(savedShippingAddress);
+                    // console.log(savedShippingAddress);
                 } else {
                     const updatedShippingAddress = await Address.findOneAndUpdate(
                         { _id: existingShippingAddress._id },
                         { ...placeOrderInput.shippingAddress },
                         { session, new: true }
                     );
-                    console.log(updatedShippingAddress);
+                    // console.log(updatedShippingAddress);
                 }
 
                 // Commit the transaction

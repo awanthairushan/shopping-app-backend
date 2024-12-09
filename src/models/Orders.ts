@@ -2,7 +2,8 @@ import mongoose, {Document, Model, Schema} from "mongoose";
 
 export interface IOrder extends Document {
     id: string
-    order: { productId: string, quantity: number }[]
+    userId: string
+    orderList: { productId: string, quantity: number }[]
 }
 
 const orderItemSchema: Schema = new Schema({
@@ -11,7 +12,8 @@ const orderItemSchema: Schema = new Schema({
 });
 
 const orderSchema: Schema = new Schema({
-    order: { type: [orderItemSchema], required: true },
+    userId: { type: String, required: true },
+    orderList: { type: [orderItemSchema], required: true },
 });
 
 const Order: Model<IOrder> = mongoose.model<IOrder>('Order', orderSchema)

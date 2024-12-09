@@ -59,13 +59,17 @@ const typeDefs = gql`
     }
     
     input ProfileInput {
+        email: String
+        password: String
+    }
+    
+    input AddressInput {
         fullName: String
         address: String
         city: String
         postalCode: String
         country: String
         contact: String
-        email: String
     }
     
     input OrderInput {
@@ -77,8 +81,9 @@ const typeDefs = gql`
         orderList: [OrderInput]
         deliveryCharge: Int
         discountCode: String
-        billingAddress: ProfileInput
-        shippingAddress: ProfileInput
+        registerData:ProfileInput
+        billingAddress: AddressInput
+        shippingAddress: AddressInput
     }
 
     type Query {
@@ -89,7 +94,6 @@ const typeDefs = gql`
     type Mutation {
         login(loginData: LoginInput): RegisterResponse!
         registerUser(userInput: UserInput): RegisterResponse!
-        saveProfile(profileInput: ProfileInput): String
         createProduct(productInput: ProductInput): Product!
         deleteProduct(ID: ID!): Boolean
         editProduct(ID: ID!, productInput: ProductInput): Boolean
